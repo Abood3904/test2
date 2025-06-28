@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["python311.withPackages (ps: with ps; [ pip ])"]
+nixPkgs = ["python311", "python311Packages.pip"]
 
 [start]
 cmd = "python3 app.py"
