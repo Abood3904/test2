@@ -4,5 +4,5 @@ nixPkgs = ["python311", "python311Packages.pip"]
 [phases.install]
 cmds = ["python -m venv venv", "./venv/bin/pip install -r voice_app/requirements.txt"]
 
-[phases.start]
+[start]
 cmd = "./venv/bin/python voice_app/app.py"
