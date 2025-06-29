@@ -22,36 +22,28 @@ startBtn.addEventListener("click", async () => {
 
     mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-        const reader = new FileReader();
 
-        reader.onloadend = async () => {
-            const base64Audio = reader.result;
+        const formData = new FormData();
+        formData.append("audio", audioBlob, "recording.webm");
 
-            const response = await fetch("/check_pronunciation", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ audio: base64Audio })
-            });
+        const response = await fetch("/check_pronunciation", {
+            method: "POST",
+            body: formData
+        });
 
-            const result = await response.json();
-            console.log("✅ النتيجة:", result);
+        const result = await response.json();
+        console.log("✅ النتيجة:", result);
 
-            if (result.success) {
-                resultDiv.textContent = "✅ نُطقك صحيح لكلمة 'ابدا'";
-            } else {
-                resultDiv.textContent = `❌ نُطق غير صحيح. أنت قلت: "${result.recognized_word || 'غير واضحة'}"`;
-            }
-        };
-
-        reader.readAsDataURL(audioBlob);
+        if (result.success) {
+            resultDiv.textContent = "✅ نُطقك صحيح لكلمة 'ابدا'";
+        } else {
+            resultDiv.textContent = `❌ نُطق غير صحيح. أنت قلت: "${result.recognized_word || 'غير واضحة'}"`;
+        }
     };
 
-    // أوقف التسجيل تلقائيًا بعد 3 ثواني
-setTimeout(() => {
-    if (mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-    }
-}, 2500);
+    setTimeout(() => {
+        if (mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+        }
+    }, 2500);
 });
