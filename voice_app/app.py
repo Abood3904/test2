@@ -8,9 +8,9 @@ import subprocess
 app = Flask(__name__)
 
 TARGET_WORD = "ابدا"
+import tempfile
+TEMP_DIR = tempfile.gettempdir()
 
-# مسار ملفات مؤقتة متوافق مع بيئة الاستضافة (مثل Render)
-TEMP_DIR = "/tmp"
 
 def convert_to_wav(input_path, output_path):
     try:
@@ -33,20 +33,15 @@ def index():
 
 @app.route("/check_pronunciation", methods=["POST"])
 def check_pronunciation():
-    data = request.json
-    audio_base64 = data.get("audio")
+    audio_file = request.files.get("audio")
 
-    if not audio_base64:
-        return jsonify({"success": False, "message": "لا يوجد صوت"})
-
-    header, encoded = audio_base64.split(",", 1)
-    audio_data = base64.b64decode(encoded)
+    if not audio_file:
+        return jsonify({"success": False, "message": "لا يوجد ملف صوتي"})
 
     original_filename = os.path.join(TEMP_DIR, f"{uuid.uuid4()}.webm")
     converted_filename = original_filename.replace(".webm", ".wav")
 
-    with open(original_filename, "wb") as f:
-        f.write(audio_data)
+    audio_file.save(original_filename)
     print("📁 حجم ملف webm:", os.path.getsize(original_filename))
 
     if not convert_to_wav(original_filename, converted_filename):
@@ -67,7 +62,6 @@ def check_pronunciation():
         print("❌ حدث خطأ أثناء التعرف على الصوت:", str(e))
         return jsonify({"success": False, "message": "خطأ في التعرف على الصوت", "recognized_word": ""})
 
-    # حذف الملفات المؤقتة
     try:
         os.remove(original_filename)
         os.remove(converted_filename)
@@ -75,7 +69,6 @@ def check_pronunciation():
         pass
 
     return jsonify({"success": success, "recognized_word": recognized_word})
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
