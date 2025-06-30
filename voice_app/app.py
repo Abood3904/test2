@@ -4,13 +4,12 @@ import uuid
 import speech_recognition as sr
 import os
 import subprocess
+import tempfile
 
 app = Flask(__name__)
 
 TARGET_WORD = "ابدا"
-import tempfile
 TEMP_DIR = tempfile.gettempdir()
-
 
 def convert_to_wav(input_path, output_path):
     try:
@@ -33,36 +32,55 @@ def index():
 
 @app.route("/check_pronunciation", methods=["POST"])
 def check_pronunciation():
+    # ✅ طباعة معلومات كاملة عن الطلب
+    print("\n📥 ====== NEW REQUEST ======")
     print("📥 Headers:", dict(request.headers))
-
-    # ✅ طباعة نوع محتوى البوست
     print("📥 Content-Type:", request.content_type)
+    print("📥 Form keys:", list(request.form.keys()))
+    print("📥 File keys:", list(request.files.keys()))
 
-    # ✅ طباعة أسماء كل الملفات المرسلة
-    print("📥 Uploaded files:", request.files)
-
-    # ✅ طباعة أسماء الفورم
-    print("📥 Form fields:", request.form)
     audio_file = request.files.get("audio")
 
+    # ✅ في حالة الملف غير موجود أو غير مقروء
     if not audio_file:
         return jsonify({
             "success": False,
-            "message": "❌ لا يوجد ملف صوتي",
+            "message": "❌ لا يوجد ملف صوتي تحت المفتاح 'audio'",
             "debug": {
                 "content_type": request.content_type,
                 "form_keys": list(request.form.keys()),
                 "file_keys": list(request.files.keys())
             }
         })
+
+    # ✅ التحقق من أن الملف ليس فارغ
+    audio_content = audio_file.read()
+    if len(audio_content) == 0:
+        return jsonify({
+            "success": False,
+            "message": "❌ الملف الصوتي موجود لكن فارغ",
+            "debug": {
+                "filename": audio_file.filename,
+                "content_type": audio_file.content_type,
+                "content_length": len(audio_content)
+            }
+        })
+
+    # ✅ إعادة المؤشر للبداية عشان ما يصير خطأ بالحفظ
+    audio_file.stream.seek(0)
+
     original_filename = os.path.join(TEMP_DIR, f"{uuid.uuid4()}.webm")
     converted_filename = original_filename.replace(".webm", ".wav")
 
     audio_file.save(original_filename)
+    print("📁 تم حفظ الملف المؤقت:", original_filename)
     print("📁 حجم ملف webm:", os.path.getsize(original_filename))
 
     if not convert_to_wav(original_filename, converted_filename):
-        return jsonify({"success": False, "message": "فشل تحويل الصوت"})
+        return jsonify({
+            "success": False,
+            "message": "❌ فشل تحويل الصوت باستخدام ffmpeg"
+        })
 
     recognizer = sr.Recognizer()
     recognized_word = ""
@@ -76,8 +94,13 @@ def check_pronunciation():
 
         success = (TARGET_WORD in recognized_word)
     except Exception as e:
-        print("❌ حدث خطأ أثناء التعرف على الصوت:", str(e))
-        return jsonify({"success": False, "message": "خطأ في التعرف على الصوت", "recognized_word": ""})
+        print("❌ خطأ أثناء التعرف على الصوت:", str(e))
+        return jsonify({
+            "success": False,
+            "message": "❌ خطأ في التعرف على الصوت",
+            "recognized_word": "",
+            "error": str(e)
+        })
 
     try:
         os.remove(original_filename)
