@@ -38,7 +38,7 @@ def check_pronunciation():
     print("📥 Content-Type:", request.content_type)
     print("📥 Form keys:", list(request.form.keys()))
     print("📥 File keys:", list(request.files.keys()))
-
+    print("📦 Raw body (first 500 bytes):", request.get_data()[:500])
     audio_file = request.files.get("audio")
 
     # ✅ في حالة الملف غير موجود أو غير مقروء
