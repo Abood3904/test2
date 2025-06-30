@@ -33,11 +33,28 @@ def index():
 
 @app.route("/check_pronunciation", methods=["POST"])
 def check_pronunciation():
+    print("📥 Headers:", dict(request.headers))
+
+    # ✅ طباعة نوع محتوى البوست
+    print("📥 Content-Type:", request.content_type)
+
+    # ✅ طباعة أسماء كل الملفات المرسلة
+    print("📥 Uploaded files:", request.files)
+
+    # ✅ طباعة أسماء الفورم
+    print("📥 Form fields:", request.form)
     audio_file = request.files.get("audio")
 
     if not audio_file:
-        return jsonify({"success": False, "message": "لا يوجد ملف صوتي"})
-
+        return jsonify({
+            "success": False,
+            "message": "❌ لا يوجد ملف صوتي",
+            "debug": {
+                "content_type": request.content_type,
+                "form_keys": list(request.form.keys()),
+                "file_keys": list(request.files.keys())
+            }
+        })
     original_filename = os.path.join(TEMP_DIR, f"{uuid.uuid4()}.webm")
     converted_filename = original_filename.replace(".webm", ".wav")
 
